@@ -1,0 +1,8 @@
+__pycache__/
+.env
+.venv
+phase1_cv/data-science-bowl-2018.zip
+phase1_cv/stage1_train.zip
+cmd.md
+
+
