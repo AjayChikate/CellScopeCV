@@ -13,6 +13,10 @@ The repository is organized into two distinct, decoupled phases:
 - **[Phase 1 (Core CV & Quantification)](#phase-1):** Standalone data processing, U-Net training with composite BCE + Soft Dice loss on Google Colab (Tesla T4 GPU), marker-controlled watershed segmentation, and cell-level morphometry.
 - **[Phase 2 (Async Serving, UI & Microservice)](#phase-2):** Non-blocking FastAPI REST gateway, RabbitMQ task queue, MongoDB persistence, interactive analytics web dashboard, and Docker Compose orchestration.
 
+<div align=center>
+<img width="400" alt="Screenshot 2026-09-17 151518" src="https://github.com/user-attachments/assets/1a5f6d76-258e-4883-8162-f14113889057" />
+<img width="400" alt="Screenshot 2026-09-17 152352" src="https://github.com/user-attachments/assets/4613a849-3d72-4402-9618-1fe038a09ec6" />
+</div>
 ---
 
 ## 🌟 Key Features
@@ -143,6 +147,10 @@ All Phase 1 evaluation metrics, training logs, curves, and weights are in [`phas
 | **Mean Test Pixel IoU** | Held-Out Test (102 slides) | **`0.7843` (78.4%)** | Strong semantic segmentation overlap |
 | **Matched Instance $F_1$** | Held-Out Test (@ IoU $\ge 0.5$) | **`0.6820` (68.2%)** | Accurate discrete nucleus identification and counting |
 
+<div align=center>
+<img width="200" alt="1b43ba45-d195-474a-ae30-967737437dfe_overlay" src="https://github.com/user-attachments/assets/8adbb6fc-857e-4013-a1b1-893c79a4a1e3" />
+<img width="200" alt="58f992ee-a905-4fb0-8a50-53abe54f417c_overlay" src="https://github.com/user-attachments/assets/93f5134a-f62e-4fa2-b9d5-a1073c54d756" />
+</div>
 ---
 
 <a id="phase-2"></a>
