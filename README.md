@@ -10,9 +10,8 @@
 **CellScope** is an end-to-end medical computer vision system for automated nuclei detection, instance segmentation, and cell-level morphometric quantification from multi-modal microscopy images. Built to bridge research-grade deep learning with clinical production systems, CellScope couples a PyTorch U-Net and classical marker-controlled watershed segmentation with an asynchronous **FastAPI + RabbitMQ + MongoDB** microservice and an interactive analytical web dashboard.
 
 The repository is organized into two distinct, decoupled phases:
-- **[Phase 1 (Core CV & Quantification)](#-phase-1--core-computer-vision--results):** Standalone data processing, U-Net training with composite BCE + Soft Dice loss on Google Colab (Tesla T4 GPU), marker-controlled watershed segmentation, and cell-level morphometry.
-
-- **[Phase 2 (Async Serving, UI & Microservice)](#-phase-2--service-architecture--interactive-ui):** Non-blocking FastAPI REST gateway, RabbitMQ task queue, MongoDB persistence, interactive analytics web dashboard, and Docker Compose orchestration.
+- **[Phase 1 (Core CV & Quantification)](#phase-1):** Standalone data processing, U-Net training with composite BCE + Soft Dice loss on Google Colab (Tesla T4 GPU), marker-controlled watershed segmentation, and cell-level morphometry.
+- **[Phase 2 (Async Serving, UI & Microservice)](#phase-2):** Non-blocking FastAPI REST gateway, RabbitMQ task queue, MongoDB persistence, interactive analytics web dashboard, and Docker Compose orchestration.
 
 ---
 
@@ -116,24 +115,23 @@ cellscope/
 └── .gitignore                     
 ```
 
----
-
+<a id="phase-1"></a>
 ## 🔬 Phase 1 — Core Computer Vision & Results
 
-Phase 1 establishes the mathematical image processing and deep learning pipeline. Training is orchestrated via the Google Colab notebook [`phase1_cv/cv.ipynb`]
+Phase 1 establishes the mathematical image processing and deep learning pipeline. Training is orchestrated via the Google Colab notebook [`phase1_cv/cv.ipynb`](phase1_cv/cv.ipynb).
 
 ### 📓 Google Colab Training Notebook
-- **Notebook Path:** [`phase1_cv/cv.ipynb`]
+- **Notebook Path:** [`phase1_cv/cv.ipynb`](phase1_cv/cv.ipynb)
 - **Dataset:** data-science-bowl-2018 training data from `data-science-bowl-2018.zip` 
 - **Reproducible Split:** Splits multi-modal microscopy images into **70% Train**, **15% Validation**, and **15% Held-Out Test** using seed `42`.
 - **Optimization Strategy:** Vanilla U-Net trained with mixed-precision arithmetic, composite BCE + Soft Dice Loss, Adam optimizer ($1 \times 10^{-4}$), and `ReduceLROnPlateau` scheduler over 50 epochs.
 
-### 📊 Evaluation 
-All Phase 1 evaluation metrics, training logs, curves, and weights are in [`phase1_cv/cellscope_phase1_results/`]:
-- **Metrics JSON:** [`phase1_cv/cellscope_phase1_results/eval_metrics.json`]
-- **Training Log:** [`phase1_cv/cellscope_phase1_results/train_log.csv`]
-- **Loss & Dice Curves:** [`phase1_cv/cellscope_phase1_results/training_curves.png`]
-- **Model Checkpoint:** [`phase1_cv/cellscope_phase1_results/unet_nuclei_best.pt`]
+### 📊 Evaluation Deliverables
+All Phase 1 evaluation metrics, training logs, curves, and weights are in [`phase1_cv/cellscope_phase1_results/`](phase1_cv/cellscope_phase1_results/):
+- **Metrics JSON:** [`phase1_cv/cellscope_phase1_results/eval_metrics.json`](phase1_cv/cellscope_phase1_results/eval_metrics.json)
+- **Training Log:** [`phase1_cv/cellscope_phase1_results/train_log.csv`](phase1_cv/cellscope_phase1_results/train_log.csv)
+- **Loss & Dice Curves:** [`phase1_cv/cellscope_phase1_results/training_curves.png`](phase1_cv/cellscope_phase1_results/training_curves.png)
+- **Model Checkpoint:** [`phase1_cv/cellscope_phase1_results/unet_nuclei_best.pt`](phase1_cv/cellscope_phase1_results/unet_nuclei_best.pt)
 
 ### 📈 Quantitative Performance Summary
 
@@ -147,6 +145,7 @@ All Phase 1 evaluation metrics, training logs, curves, and weights are in [`phas
 
 ---
 
+<a id="phase-2"></a>
 ## 🖥️ Phase 2 — Service Architecture & Interactive UI
 
 Phase 2 wraps the trained model in an asynchronous, containerized microservice and serves an interactive web dashboard.
