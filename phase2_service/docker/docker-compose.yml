@@ -1,0 +1,87 @@
+version: "3.8"
+
+services:
+  # 1. RabbitMQ Message Broker with Management UI
+  rabbitmq:
+    image: rabbitmq:3-management
+    container_name: cellscope-rabbitmq
+    restart: unless-stopped
+    ports:
+      - "5672:5672"     # AMQP protocol port
+      - "15672:15672"   # Management Web Dashboard
+    environment:
+      RABBITMQ_DEFAULT_USER: guest
+      RABBITMQ_DEFAULT_PASS: guest
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+
+  # 2. MongoDB Document Store for Job Results & Status
+  mongodb:
+    image: mongo:7
+    container_name: cellscope-mongodb
+    restart: unless-stopped
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo-data:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  # 3. FastAPI Non-Blocking Web API
+  api:
+    build:
+      context: ../..
+      dockerfile: phase2_service/docker/Dockerfile.api
+    container_name: cellscope-api
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    environment:
+      - MONGO_URI=mongodb://mongodb:27017
+      - MONGO_DB_NAME=cellscope
+      - RABBITMQ_URI=amqp://guest:guest@rabbitmq:5672/
+      - SHARED_DATA_DIR=/data
+    volumes:
+      - shared-data:/data
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+      mongodb:
+        condition: service_healthy
+
+  # 4. RabbitMQ Consumer / U-Net Inference Worker
+  worker:
+    build:
+      context: ../..
+      dockerfile: phase2_service/docker/Dockerfile.worker
+    container_name: cellscope-worker
+    restart: unless-stopped
+    environment:
+      - MONGO_URI=mongodb://mongodb:27017
+      - MONGO_DB_NAME=cellscope
+      - RABBITMQ_URI=amqp://guest:guest@rabbitmq:5672/
+      - SHARED_DATA_DIR=/data
+      - INFERENCE_DEVICE=cpu
+      - MODEL_PATH=/app/phase2_service/models/unet_nuclei_best.pt
+    volumes:
+      - shared-data:/data
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+      mongodb:
+        condition: service_healthy
+
+volumes:
+  shared-data:
+    name: cellscope-shared-data
+  mongo-data:
+    name: cellscope-mongo-data
+

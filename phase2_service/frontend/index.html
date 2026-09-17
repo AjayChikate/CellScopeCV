@@ -1,0 +1,1752 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CellScope — Nuclei Segmentation & Morphometry</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-base: #0a0e17;
+      --bg-surface: #111827;
+      --bg-card: #1a2234;
+      --bg-card-hover: #222d42;
+      --border-subtle: #243046;
+      --border-accent: #3b82f6;
+      --text-main: #f3f4f6;
+      --text-muted: #9ca3af;
+      --text-dim: #6b7280;
+      --accent-cyan: #06b6d4;
+      --accent-blue: #3b82f6;
+      --accent-emerald: #10b981;
+      --accent-amber: #f59e0b;
+      --accent-rose: #f43f5e;
+      --radius-sm: 6px;
+      --radius-md: 10px;
+      --radius-lg: 16px;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background-color: var(--bg-base);
+      color: var(--text-main);
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      min-height: 100vh;
+      line-height: 1.5;
+      padding-bottom: 60px;
+    }
+
+    code, pre, .font-mono {
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    /* Container */
+    .container {
+      max-width: 1360px;
+      margin: 0 auto;
+      padding: 0 24px;
+    }
+
+    /* Header & Navigation */
+    header {
+      background: rgba(17, 24, 39, 0.8);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border-subtle);
+      position: sticky;
+      top: 0;
+      z-index: 50;
+      padding: 16px 0;
+    }
+
+    .nav-wrapper {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 20px;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      text-decoration: none;
+      color: inherit;
+    }
+
+    .brand-icon {
+      width: 38px;
+      height: 38px;
+      background: linear-gradient(135deg, var(--accent-cyan), var(--accent-blue));
+      border-radius: var(--radius-md);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 0 15px rgba(6, 182, 212, 0.4);
+    }
+
+    .brand-icon svg {
+      width: 22px;
+      height: 22px;
+      color: #fff;
+    }
+
+    .brand-title {
+      font-size: 1.25rem;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .badge-phase {
+      font-size: 0.7rem;
+      font-weight: 600;
+      padding: 2px 8px;
+      border-radius: 9999px;
+      background: rgba(6, 182, 212, 0.15);
+      color: var(--accent-cyan);
+      border: 1px solid rgba(6, 182, 212, 0.3);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    /* Health Telemetry Bar */
+    .telemetry-bar {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      background: var(--bg-card);
+      padding: 6px 14px;
+      border-radius: 9999px;
+      border: 1px solid var(--border-subtle);
+      font-size: 0.8rem;
+    }
+
+    .telemetry-item {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      color: var(--text-muted);
+    }
+
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--text-dim);
+      transition: background-color 0.3s;
+    }
+
+    .status-dot.online {
+      background: var(--accent-emerald);
+      box-shadow: 0 0 8px rgba(16, 185, 129, 0.6);
+    }
+
+    .status-dot.offline {
+      background: var(--accent-rose);
+      box-shadow: 0 0 8px rgba(244, 63, 94, 0.6);
+    }
+
+    .btn-refresh-health {
+      background: transparent;
+      border: none;
+      color: var(--text-muted);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      padding: 2px;
+      border-radius: 4px;
+      transition: color 0.2s;
+    }
+
+    .btn-refresh-health:hover {
+      color: var(--accent-cyan);
+    }
+
+    /* Hero intro */
+    .hero {
+      margin-top: 32px;
+      margin-bottom: 28px;
+    }
+
+    .hero h1 {
+      font-size: 1.9rem;
+      font-weight: 700;
+      letter-spacing: -0.03em;
+      margin-bottom: 6px;
+      background: linear-gradient(135deg, #fff 40%, var(--text-muted));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .hero p {
+      color: var(--text-muted);
+      font-size: 0.95rem;
+      max-width: 780px;
+    }
+
+    /* Main Grid Layout */
+    .main-grid {
+      display: grid;
+      grid-template-columns: 380px 1fr;
+      gap: 28px;
+      align-items: start;
+    }
+
+    @media (max-width: 1024px) {
+      .main-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    /* Card Base */
+    .card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-lg);
+      padding: 24px;
+      position: relative;
+    }
+
+    .card-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 18px;
+    }
+
+    .card-title {
+      font-size: 1.05rem;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    /* Upload Zone */
+    .drop-zone {
+      border: 2px dashed var(--border-subtle);
+      border-radius: var(--radius-md);
+      padding: 32px 16px;
+      text-align: center;
+      cursor: pointer;
+      background: rgba(17, 24, 39, 0.4);
+      transition: all 0.2s ease;
+    }
+
+    .drop-zone:hover, .drop-zone.dragover {
+      border-color: var(--accent-cyan);
+      background: rgba(6, 182, 212, 0.05);
+    }
+
+    .drop-zone-icon {
+      width: 48px;
+      height: 48px;
+      margin: 0 auto 12px;
+      color: var(--accent-cyan);
+    }
+
+    .drop-zone-text {
+      font-size: 0.9rem;
+      font-weight: 500;
+      margin-bottom: 4px;
+    }
+
+    .drop-zone-hint {
+      font-size: 0.75rem;
+      color: var(--text-dim);
+    }
+
+    /* Buttons */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      font-weight: 600;
+      font-size: 0.9rem;
+      padding: 10px 18px;
+      border-radius: var(--radius-md);
+      cursor: pointer;
+      border: none;
+      transition: all 0.2s ease;
+      text-decoration: none;
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, var(--accent-cyan), var(--accent-blue));
+      color: #fff;
+      box-shadow: 0 4px 12px rgba(6, 182, 212, 0.3);
+      width: 100%;
+    }
+
+    .btn-primary:hover:not(:disabled) {
+      box-shadow: 0 6px 18px rgba(6, 182, 212, 0.5);
+      transform: translateY(-1px);
+    }
+
+    .btn-primary:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      box-shadow: none;
+    }
+
+    .btn-secondary {
+      background: var(--bg-surface);
+      color: var(--text-main);
+      border: 1px solid var(--border-subtle);
+      width: 100%;
+    }
+
+    .btn-secondary:hover {
+      background: var(--bg-card-hover);
+      border-color: var(--text-dim);
+    }
+
+    .btn-outline-sm {
+      background: transparent;
+      color: var(--text-muted);
+      border: 1px solid var(--border-subtle);
+      padding: 6px 12px;
+      font-size: 0.8rem;
+    }
+
+    .btn-outline-sm:hover {
+      color: #fff;
+      border-color: var(--accent-cyan);
+      background: rgba(6, 182, 212, 0.08);
+    }
+
+    /* Pre-Flight Preview Box */
+    .preview-box {
+      margin-top: 18px;
+      background: var(--bg-surface);
+      border-radius: var(--radius-md);
+      border: 1px solid var(--border-subtle);
+      padding: 12px;
+      display: none;
+    }
+
+    .preview-img-container {
+      width: 100%;
+      height: 180px;
+      border-radius: var(--radius-sm);
+      overflow: hidden;
+      background: #000;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .preview-img-container img {
+      max-width: 100%;
+      max-height: 100%;
+      object-fit: contain;
+    }
+
+    .preview-meta {
+      display: flex;
+      justify-content: space-between;
+      margin-top: 10px;
+      font-size: 0.75rem;
+      color: var(--text-muted);
+    }
+
+    /* Progress & Stepper */
+    .stepper {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 24px;
+      position: relative;
+    }
+
+    .stepper::before {
+      content: '';
+      position: absolute;
+      top: 14px;
+      left: 20px;
+      right: 20px;
+      height: 2px;
+      background: var(--border-subtle);
+      z-index: 1;
+    }
+
+    .step-item {
+      position: relative;
+      z-index: 2;
+      text-align: center;
+      flex: 1;
+    }
+
+    .step-circle {
+      width: 30px;
+      height: 30px;
+      border-radius: 50%;
+      background: var(--bg-surface);
+      border: 2px solid var(--border-subtle);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto 8px;
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: var(--text-dim);
+      transition: all 0.3s;
+    }
+
+    .step-item.active .step-circle {
+      border-color: var(--accent-cyan);
+      color: #fff;
+      background: rgba(6, 182, 212, 0.2);
+      box-shadow: 0 0 12px rgba(6, 182, 212, 0.5);
+      animation: pulse 1.5s infinite;
+    }
+
+    .step-item.completed .step-circle {
+      border-color: var(--accent-emerald);
+      background: var(--accent-emerald);
+      color: #fff;
+    }
+
+    .step-label {
+      font-size: 0.75rem;
+      color: var(--text-dim);
+      font-weight: 500;
+    }
+
+    .step-item.active .step-label {
+      color: var(--accent-cyan);
+    }
+
+    .step-item.completed .step-label {
+      color: var(--text-main);
+    }
+
+    @keyframes pulse {
+      0% { transform: scale(1); }
+      50% { transform: scale(1.08); }
+      100% { transform: scale(1); }
+    }
+
+    /* Viewer Area */
+    .viewer-card {
+      min-height: 480px;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .viewer-controls {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 16px;
+      flex-wrap: wrap;
+    }
+
+    .toggle-group {
+      display: inline-flex;
+      background: var(--bg-surface);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-sm);
+      padding: 3px;
+    }
+
+    .toggle-btn {
+      background: transparent;
+      border: none;
+      color: var(--text-muted);
+      padding: 6px 14px;
+      font-size: 0.8rem;
+      font-weight: 500;
+      border-radius: 4px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .toggle-btn.active {
+      background: var(--accent-blue);
+      color: #fff;
+      box-shadow: 0 2px 6px rgba(59, 130, 246, 0.3);
+    }
+
+    .viewer-display {
+      flex: 1;
+      background: #000;
+      border-radius: var(--radius-md);
+      border: 1px solid var(--border-subtle);
+      overflow: hidden;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 380px;
+      position: relative;
+    }
+
+    .viewer-placeholder {
+      text-align: center;
+      color: var(--text-dim);
+      padding: 40px;
+    }
+
+    .viewer-placeholder svg {
+      width: 56px;
+      height: 56px;
+      margin-bottom: 14px;
+      stroke-width: 1.5;
+    }
+
+    .comparison-container {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      width: 100%;
+      height: 100%;
+      gap: 2px;
+      background: var(--border-subtle);
+    }
+
+    .comparison-panel {
+      background: #000;
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 100%;
+    }
+
+    .comparison-panel img {
+      max-width: 100%;
+      max-height: 440px;
+      object-fit: contain;
+    }
+
+    .panel-tag {
+      position: absolute;
+      top: 12px;
+      left: 12px;
+      background: rgba(17, 24, 39, 0.8);
+      backdrop-filter: blur(8px);
+      border: 1px solid var(--border-subtle);
+      font-size: 0.7rem;
+      font-weight: 600;
+      padding: 3px 8px;
+      border-radius: 4px;
+      color: #fff;
+      pointer-events: none;
+    }
+
+    /* Quantitative Metric Cards Grid */
+    .metrics-section {
+      margin-top: 28px;
+    }
+
+    .metrics-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 16px;
+      margin-bottom: 28px;
+    }
+
+    .metric-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-md);
+      padding: 16px;
+      transition: transform 0.2s;
+    }
+
+    .metric-card:hover {
+      transform: translateY(-2px);
+      border-color: var(--accent-cyan);
+    }
+
+    .metric-label {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      font-weight: 500;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      margin-bottom: 6px;
+    }
+
+    .metric-value {
+      font-size: 1.5rem;
+      font-weight: 700;
+      color: #fff;
+      display: flex;
+      align-items: baseline;
+      gap: 4px;
+    }
+
+    .metric-unit {
+      font-size: 0.75rem;
+      color: var(--text-dim);
+      font-weight: 400;
+    }
+
+    .metric-sub {
+      font-size: 0.7rem;
+      color: var(--accent-cyan);
+      margin-top: 4px;
+    }
+
+    /* Charts Row */
+    .charts-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 24px;
+      margin-bottom: 28px;
+    }
+
+    @media (max-width: 900px) {
+      .charts-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .chart-container {
+      background: var(--bg-surface);
+      border-radius: var(--radius-md);
+      border: 1px solid var(--border-subtle);
+      padding: 16px;
+      height: 290px;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .chart-header {
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      margin-bottom: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .chart-canvas-wrapper {
+      position: relative;
+      width: 100%;
+      height: 220px;
+      min-height: 220px;
+      flex: 1;
+    }
+
+    .chart-canvas-wrapper canvas {
+      display: block;
+      width: 100% !important;
+      height: 100% !important;
+    }
+
+    /* Feature Table */
+    .table-container {
+      background: var(--bg-surface);
+      border-radius: var(--radius-md);
+      border: 1px solid var(--border-subtle);
+      overflow: hidden;
+    }
+
+    .table-toolbar {
+      padding: 12px 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      border-bottom: 1px solid var(--border-subtle);
+      background: var(--bg-card);
+    }
+
+    .search-input {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-sm);
+      padding: 6px 12px;
+      font-size: 0.8rem;
+      color: var(--text-main);
+      width: 220px;
+      outline: none;
+    }
+
+    .search-input:focus {
+      border-color: var(--accent-cyan);
+    }
+
+    .table-wrapper {
+      max-height: 380px;
+      overflow-y: auto;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.8rem;
+      text-align: left;
+    }
+
+    th {
+      background: rgba(26, 34, 52, 0.8);
+      color: var(--text-muted);
+      padding: 10px 14px;
+      font-weight: 600;
+      position: sticky;
+      top: 0;
+      cursor: pointer;
+      user-select: none;
+      border-bottom: 1px solid var(--border-subtle);
+      white-space: nowrap;
+    }
+
+    th:hover {
+      color: var(--accent-cyan);
+    }
+
+    td {
+      padding: 8px 14px;
+      border-bottom: 1px solid rgba(36, 48, 70, 0.4);
+      color: var(--text-main);
+      white-space: nowrap;
+    }
+
+    tr:hover td {
+      background: rgba(6, 182, 212, 0.04);
+    }
+
+    /* Alerts */
+    .alert {
+      padding: 12px 16px;
+      border-radius: var(--radius-md);
+      font-size: 0.85rem;
+      margin-bottom: 18px;
+      display: none;
+    }
+
+    .alert-error {
+      background: rgba(244, 63, 94, 0.1);
+      border: 1px solid rgba(244, 63, 94, 0.3);
+      color: #fda4af;
+    }
+
+    .alert-success {
+      background: rgba(16, 185, 129, 0.1);
+      border: 1px solid rgba(16, 185, 129, 0.3);
+      color: #6ee7b7;
+    }
+
+    /* Tooltip */
+    .tooltip {
+      position: absolute;
+      background: rgba(17, 24, 39, 0.95);
+      border: 1px solid var(--border-subtle);
+      padding: 4px 8px;
+      border-radius: 4px;
+      font-size: 0.75rem;
+      pointer-events: none;
+      z-index: 100;
+      display: none;
+      color: #fff;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Top Navigation Header -->
+  <header>
+    <div class="container nav-wrapper">
+      <a href="/" class="brand">
+        <div class="brand-icon">
+          <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z"></path>
+          </svg>
+        </div>
+        <div>
+          <div class="brand-title">
+            CellScope
+            <span class="badge-phase">v1.0 Serving</span>
+          </div>
+        </div>
+      </a>
+
+      <!-- Telemetry Health Badges -->
+      <div class="telemetry-bar">
+        <div class="telemetry-item" title="FastAPI HTTP Gateway">
+          <div class="status-dot online" id="dot-api"></div>
+          <span>API</span>
+        </div>
+        <div class="telemetry-item" title="RabbitMQ Message Broker">
+          <div class="status-dot" id="dot-rabbitmq"></div>
+          <span>RabbitMQ</span>
+        </div>
+        <div class="telemetry-item" title="MongoDB Persistence Layer">
+          <div class="status-dot" id="dot-mongo"></div>
+          <span>MongoDB</span>
+        </div>
+        <div class="telemetry-item" title="PyTorch U-Net Inference Worker">
+          <div class="status-dot" id="dot-model"></div>
+          <span>Worker U-Net</span>
+        </div>
+        <button class="btn-refresh-health" id="btn-refresh-health" title="Refresh Service Health">
+          <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+          </svg>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Content Body -->
+  <main class="container">
+    
+    <!-- Hero Header -->
+    <div class="hero">
+      <h1>Nuclei Instance Segmentation & Quantification</h1>
+      <p>Upload high-resolution histology or fluorescence microscopy images. CellScope segments individual nuclei using a trained PyTorch U-Net with marker-controlled watershed separation, extracting cell-level morphology and spatial density metrics in real time.</p>
+    </div>
+
+    <!-- Alert Box -->
+    <div class="alert alert-error" id="alert-box"></div>
+
+    <!-- Main Workspace Grid -->
+    <div class="main-grid">
+
+      <!-- Left Column: Upload & Configuration -->
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title">
+            <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+            </svg>
+            Microscopy Input
+          </div>
+        </div>
+
+        <!-- Drag & Drop Zone -->
+        <div class="drop-zone" id="drop-zone">
+          <input type="file" id="file-input" accept=".png,.jpg,.jpeg,.tif,.tiff" style="display: none;">
+          <svg class="drop-zone-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path>
+          </svg>
+          <div class="drop-zone-text">Drop microscopy slide here</div>
+          <div class="drop-zone-hint">PNG, JPG, or TIFF format</div>
+        </div>
+
+        <!-- Or Load Sample Slide -->
+        <div style="margin-top: 14px;">
+          <button class="btn btn-secondary" id="btn-load-sample">
+            <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path>
+            </svg>
+            Load Sample Histology Slide
+          </button>
+        </div>
+
+        <!-- Pre-Flight Image Preview -->
+        <div class="preview-box" id="preview-box">
+          <div class="preview-img-container">
+            <img id="preview-img" alt="Slide preview">
+          </div>
+          <div class="preview-meta">
+            <span id="preview-name">sample.png</span>
+            <span id="preview-dim">---</span>
+            <span id="preview-size">---</span>
+          </div>
+        </div>
+
+        <!-- Action Button -->
+        <div style="margin-top: 20px;">
+          <button class="btn btn-primary" id="btn-submit" disabled>
+            <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"></path>
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+            </svg>
+            Run Nuclei Segmentation
+          </button>
+        </div>
+
+        <!-- Job Information -->
+        <div style="margin-top: 20px; font-size: 0.75rem; color: var(--text-dim);" id="job-info-box">
+          <div>Assumed pixel scale: <code class="font-mono" style="color: var(--accent-cyan);">0.25 µm / px</code></div>
+          <div style="margin-top: 4px;">Watershed marker threshold: <code class="font-mono">0.50</code></div>
+        </div>
+
+      </div>
+
+      <!-- Right Column: Visual Viewer & Analysis -->
+      <div>
+        
+        <!-- Live Pipeline Stepper -->
+        <div class="stepper" id="stepper">
+          <div class="step-item" id="step-upload">
+            <div class="step-circle">1</div>
+            <div class="step-label">Upload</div>
+          </div>
+          <div class="step-item" id="step-queue">
+            <div class="step-circle">2</div>
+            <div class="step-label">Queued</div>
+          </div>
+          <div class="step-item" id="step-process">
+            <div class="step-circle">3</div>
+            <div class="step-label">Processing</div>
+          </div>
+          <div class="step-item" id="step-done">
+            <div class="step-circle">4</div>
+            <div class="step-label">Completed</div>
+          </div>
+        </div>
+
+        <!-- Diagnostic Viewer Card -->
+        <div class="card viewer-card">
+          <div class="viewer-controls">
+            <div class="card-title">
+              <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
+              </svg>
+              Segmentation Diagnostic Viewer
+            </div>
+
+            <!-- View Mode Switcher -->
+            <div class="toggle-group" id="view-mode-group" style="display: none;">
+              <button class="toggle-btn active" data-mode="split">Side-by-Side</button>
+              <button class="toggle-btn" data-mode="overlay">Overlay Only</button>
+              <button class="toggle-btn" data-mode="raw">Original Only</button>
+            </div>
+
+            <!-- Download Button -->
+            <a class="btn btn-outline-sm" id="btn-download-overlay" style="display: none;" download="cellscope_overlay.png">
+              <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path>
+              </svg>
+              Download Overlay PNG
+            </a>
+          </div>
+
+          <!-- Main Visual Viewport -->
+          <div class="viewer-display" id="viewer-display">
+            <div class="viewer-placeholder" id="viewer-placeholder">
+              <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 17V7m0 10a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h2a2 2 0 012 2m0 10a2 2 0 002 2h2a2 2 0 002-2M9 7a2 2 0 012-2h2a2 2 0 012 2m0 10V7m0 10a2 2 0 002 2h2a2 2 0 002-2V7a2 2 0 00-2-2h-2a2 2 0 00-2 2"></path>
+              </svg>
+              <div style="font-weight: 500; font-size: 0.95rem; margin-bottom: 4px;">No slide analyzed yet</div>
+              <div style="font-size: 0.8rem;">Select or drop a slide on the left, then click "Run Nuclei Segmentation"</div>
+            </div>
+
+            <div class="comparison-container" id="comparison-view" style="display: none;">
+              <div class="comparison-panel" id="panel-raw">
+                <span class="panel-tag">Original Microscopy Slide</span>
+                <img id="view-raw-img" alt="Raw Image">
+              </div>
+              <div class="comparison-panel" id="panel-overlay">
+                <span class="panel-tag">U-Net + Watershed Overlay</span>
+                <img id="view-overlay-img" alt="Overlay Image">
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+    </div>
+
+    <!-- Results Section (Summary Cards, Charts, & Table) -->
+    <div class="metrics-section" id="results-section" style="display: none;">
+      
+      <!-- Summary Cards Grid -->
+      <div class="metrics-grid">
+        <div class="metric-card">
+          <div class="metric-label">Detected Nuclei</div>
+          <div class="metric-value" id="val-count">0</div>
+          <div class="metric-sub">Separated instances</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-label">Cell Density</div>
+          <div class="metric-value" id="val-density">0 <span class="metric-unit">/ mm²</span></div>
+          <div class="metric-sub" id="val-density-px">0 / px²</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-label">Mean Nuclear Area</div>
+          <div class="metric-value" id="val-area">0 <span class="metric-unit">µm²</span></div>
+          <div class="metric-sub" id="val-area-std">± 0.0 µm²</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-label">Mean Circularity</div>
+          <div class="metric-value" id="val-circ">0.00</div>
+          <div class="metric-sub" id="val-circ-std">± 0.00 (1.0 = round)</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-label">Mean Eccentricity</div>
+          <div class="metric-value" id="val-ecc">0.00</div>
+          <div class="metric-sub" id="val-ecc-std">0.0 = circle, 1.0 = line</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-label">Mean NND (Clustering)</div>
+          <div class="metric-value" id="val-nnd">0.0 <span class="metric-unit">µm</span></div>
+          <div class="metric-sub">Nearest neighbor distance</div>
+        </div>
+      </div>
+
+      <!-- Charts Row -->
+      <div class="charts-grid">
+        <div class="chart-container">
+          <div class="chart-header">
+            <span>Nuclear Area Distribution (µm²)</span>
+            <span style="font-size: 0.75rem; color: var(--accent-cyan);">Frequency Histogram</span>
+          </div>
+          <div class="chart-canvas-wrapper">
+            <canvas id="chart-area-hist"></canvas>
+          </div>
+        </div>
+        <div class="chart-container">
+          <div class="chart-header">
+            <span>Circularity vs. Eccentricity Morphometry</span>
+            <span style="font-size: 0.75rem; color: var(--accent-blue);">Scatter Plot</span>
+          </div>
+          <div class="chart-canvas-wrapper">
+            <canvas id="chart-shape-scatter"></canvas>
+          </div>
+        </div>
+      </div>
+
+      <!-- Interactive Nuclei Feature Table -->
+      <div class="table-container">
+        <div class="table-toolbar">
+          <div style="font-weight: 600; font-size: 0.9rem; display: flex; align-items: center; gap: 8px;">
+            <span>Individual Nuclei Feature Table</span>
+            <span class="badge-phase" id="table-count-badge">0 items</span>
+          </div>
+          <div style="display: flex; gap: 10px; align-items: center;">
+            <input type="text" class="search-input" id="table-search" placeholder="Search cell ID...">
+            <button class="btn btn-outline-sm" id="btn-export-csv">
+              <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+              </svg>
+              Export CSV
+            </button>
+          </div>
+        </div>
+
+        <div class="table-wrapper">
+          <table id="nuclei-table">
+            <thead>
+              <tr>
+                <th data-sort="id">Cell # ⇕</th>
+                <th data-sort="area_um2">Area (µm²) ⇕</th>
+                <th data-sort="area">Area (px²) ⇕</th>
+                <th data-sort="perimeter_um">Perimeter (µm) ⇕</th>
+                <th data-sort="circularity">Circularity ⇕</th>
+                <th data-sort="eccentricity">Eccentricity ⇕</th>
+                <th>Centroid (X, Y)</th>
+              </tr>
+            </thead>
+            <tbody id="table-tbody">
+              <!-- Dynamically populated -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+    </div>
+
+  </main>
+
+  <div class="tooltip" id="canvas-tooltip"></div>
+
+  <script>
+    // State management
+    let selectedFile = null;
+    let currentJobId = null;
+    let pollInterval = null;
+    let pollStartTime = null;
+    let latestResult = null;
+    let sortColumn = 'id';
+    let sortAsc = true;
+
+    // DOM Elements
+    const dropZone = document.getElementById('drop-zone');
+    const fileInput = document.getElementById('file-input');
+    const previewBox = document.getElementById('preview-box');
+    const previewImg = document.getElementById('preview-img');
+    const previewName = document.getElementById('preview-name');
+    const previewDim = document.getElementById('preview-dim');
+    const previewSize = document.getElementById('preview-size');
+    const btnSubmit = document.getElementById('btn-submit');
+    const btnLoadSample = document.getElementById('btn-load-sample');
+    const btnRefreshHealth = document.getElementById('btn-refresh-health');
+    const alertBox = document.getElementById('alert-box');
+
+    // Stepper
+    const stepUpload = document.getElementById('step-upload');
+    const stepQueue = document.getElementById('step-queue');
+    const stepProcess = document.getElementById('step-process');
+    const stepDone = document.getElementById('step-done');
+
+    // Viewer
+    const viewerPlaceholder = document.getElementById('viewer-placeholder');
+    const comparisonView = document.getElementById('comparison-view');
+    const viewRawImg = document.getElementById('view-raw-img');
+    const viewOverlayImg = document.getElementById('view-overlay-img');
+    const viewModeGroup = document.getElementById('view-mode-group');
+    const btnDownloadOverlay = document.getElementById('btn-download-overlay');
+    const panelRaw = document.getElementById('panel-raw');
+    const panelOverlay = document.getElementById('panel-overlay');
+
+    // Results Section
+    const resultsSection = document.getElementById('results-section');
+    const tableTbody = document.getElementById('table-tbody');
+    const tableSearch = document.getElementById('table-search');
+    const tableCountBadge = document.getElementById('table-count-badge');
+    const btnExportCsv = document.getElementById('btn-export-csv');
+
+    // Telemetry Dots
+    const dotApi = document.getElementById('dot-api');
+    const dotRabbit = document.getElementById('dot-rabbitmq');
+    const dotMongo = document.getElementById('dot-mongo');
+    const dotModel = document.getElementById('dot-model');
+
+    // -------------------------------------------------------------
+    // Service Health Polling
+    // -------------------------------------------------------------
+    async function checkHealth() {
+      try {
+        const res = await fetch('/health');
+        if (!res.ok) throw new Error('Health check returned non-200');
+        const data = await res.json();
+        
+        dotApi.className = 'status-dot online';
+        dotRabbit.className = `status-dot ${data.rabbitmq === 'connected' ? 'online' : 'offline'}`;
+        dotMongo.className = `status-dot ${data.mongodb === 'connected' ? 'online' : 'offline'}`;
+        dotModel.className = `status-dot ${data.model_loaded ? 'online' : 'offline'}`;
+      } catch (err) {
+        dotApi.className = 'status-dot offline';
+        dotRabbit.className = 'status-dot offline';
+        dotMongo.className = 'status-dot offline';
+        dotModel.className = 'status-dot offline';
+      }
+    }
+
+    btnRefreshHealth.addEventListener('click', checkHealth);
+    setInterval(checkHealth, 10000);
+    checkHealth();
+
+    // -------------------------------------------------------------
+    // Drag & Drop / File Input
+    // -------------------------------------------------------------
+    dropZone.addEventListener('click', () => fileInput.click());
+
+    dropZone.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      dropZone.classList.add('dragover');
+    });
+
+    dropZone.addEventListener('dragleave', () => {
+      dropZone.classList.remove('dragover');
+    });
+
+    dropZone.addEventListener('drop', (e) => {
+      e.preventDefault();
+      dropZone.classList.remove('dragover');
+      if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+        handleFileSelect(e.dataTransfer.files[0]);
+      }
+    });
+
+    fileInput.addEventListener('change', (e) => {
+      if (e.target.files && e.target.files.length > 0) {
+        handleFileSelect(e.target.files[0]);
+      }
+    });
+
+    function handleFileSelect(file) {
+      selectedFile = file;
+      previewName.textContent = file.name;
+      previewSize.textContent = (file.size / 1024).toFixed(1) + ' KB';
+
+      const reader = new FileReader();
+      reader.onload = (ev) => {
+        previewImg.src = ev.target.result;
+        viewRawImg.src = ev.target.result;
+        
+        const imgObj = new Image();
+        imgObj.onload = () => {
+          previewDim.textContent = `${imgObj.width} × ${imgObj.height} px`;
+        };
+        imgObj.src = ev.target.result;
+
+        previewBox.style.display = 'block';
+        btnSubmit.disabled = false;
+        hideAlert();
+      };
+      reader.readAsDataURL(file);
+    }
+
+    // Load sample slide button
+    btnLoadSample.addEventListener('click', async () => {
+      try {
+        btnLoadSample.disabled = true;
+        btnLoadSample.innerHTML = 'Loading sample slide...';
+        const res = await fetch('/sample.png');
+        if (!res.ok) throw new Error('Could not fetch /sample.png from server');
+        const blob = await res.blob();
+        const file = new File([blob], 'sample.png', { type: 'image/png' });
+        handleFileSelect(file);
+      } catch (e) {
+        showAlert('Failed to load sample slide: ' + e.message);
+      } finally {
+        btnLoadSample.disabled = false;
+        btnLoadSample.innerHTML = `<svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg> Load Sample Histology Slide`;
+      }
+    });
+
+    // -------------------------------------------------------------
+    // Stepper State Management
+    // -------------------------------------------------------------
+    function setStep(step) {
+      stepUpload.className = 'step-item' + (step >= 1 ? (step === 1 ? ' active' : ' completed') : '');
+      stepQueue.className = 'step-item' + (step >= 2 ? (step === 2 ? ' active' : ' completed') : '');
+      stepProcess.className = 'step-item' + (step >= 3 ? (step === 3 ? ' active' : ' completed') : '');
+      stepDone.className = 'step-item' + (step >= 4 ? ' completed' : '');
+    }
+
+    function showAlert(msg) {
+      alertBox.textContent = msg;
+      alertBox.style.display = 'block';
+    }
+
+    function hideAlert() {
+      alertBox.style.display = 'none';
+    }
+
+    // -------------------------------------------------------------
+    // Job Submission & Polling
+    // -------------------------------------------------------------
+    btnSubmit.addEventListener('click', async () => {
+      if (!selectedFile) return;
+
+      hideAlert();
+      btnSubmit.disabled = true;
+      btnSubmit.innerHTML = `<svg class="animate-spin" width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="animation: spin 1s linear infinite;"><circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" style="opacity: 0.25;"></circle><path fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" style="opacity: 0.75;"></path></svg> Uploading...`;
+
+      setStep(1);
+
+      const formData = new FormData();
+      formData.append('file', selectedFile);
+
+      try {
+        const postRes = await fetch('/jobs', {
+          method: 'POST',
+          body: formData
+        });
+
+        if (!postRes.ok) {
+          const errData = await postRes.json().catch(() => ({}));
+          throw new Error(errData.detail || `Upload failed with HTTP ${postRes.status}`);
+        }
+
+        const data = await postRes.json();
+        currentJobId = data.job_id;
+        pollStartTime = Date.now();
+        setStep(2); // Queued
+
+        // Start polling status
+        btnSubmit.innerHTML = `Analyzing Slide (ID: ${currentJobId.slice(0, 8)})...`;
+        pollInterval = setInterval(pollJobStatus, 800);
+
+      } catch (err) {
+        showAlert('Submission Error: ' + err.message);
+        btnSubmit.disabled = false;
+        btnSubmit.innerHTML = `Run Nuclei Segmentation`;
+        setStep(0);
+      }
+    });
+
+    async function pollJobStatus() {
+      if (!currentJobId) return;
+
+      try {
+        const res = await fetch(`/jobs/${currentJobId}`);
+        if (!res.ok) throw new Error(`Failed to query job: HTTP ${res.status}`);
+
+        const job = await res.json();
+        const elapsedSec = ((Date.now() - pollStartTime) / 1000).toFixed(1);
+
+        if (job.status === 'queued') {
+          setStep(2);
+          btnSubmit.innerHTML = `Queued in RabbitMQ (${elapsedSec}s)...`;
+        } else if (job.status === 'processing') {
+          setStep(3);
+          btnSubmit.innerHTML = `Worker Segmenting (${elapsedSec}s)...`;
+        } else if (job.status === 'done') {
+          clearInterval(pollInterval);
+          setStep(4);
+          btnSubmit.disabled = false;
+          btnSubmit.innerHTML = `<svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg> Completed in ${elapsedSec}s`;
+          await fetchAndRenderResults(currentJobId);
+        } else if (job.status === 'failed') {
+          clearInterval(pollInterval);
+          btnSubmit.disabled = false;
+          btnSubmit.innerHTML = `Run Nuclei Segmentation`;
+          showAlert(`Inference Worker Failed: ${job.error || 'Unknown error'}`);
+          setStep(0);
+        }
+      } catch (err) {
+        clearInterval(pollInterval);
+        btnSubmit.disabled = false;
+        btnSubmit.innerHTML = `Run Nuclei Segmentation`;
+        showAlert('Polling Error: ' + err.message);
+      }
+    }
+
+    // -------------------------------------------------------------
+    // Result Rendering
+    // -------------------------------------------------------------
+    async function fetchAndRenderResults(jobId) {
+      try {
+        const res = await fetch(`/jobs/${jobId}/result`);
+        if (!res.ok) throw new Error(`Could not fetch results: HTTP ${res.status}`);
+
+        const data = await res.json();
+        latestResult = data;
+
+        // Display images in viewer
+        viewerPlaceholder.style.display = 'none';
+        comparisonView.style.display = 'grid';
+        viewModeGroup.style.display = 'inline-flex';
+        btnDownloadOverlay.style.display = 'inline-flex';
+        
+        viewOverlayImg.src = data.overlay_image_url;
+        btnDownloadOverlay.href = data.overlay_image_url;
+
+        // Populate Summary Cards
+        const sum = data.summary;
+        document.getElementById('val-count').textContent = sum.nucleus_count || 0;
+        document.getElementById('val-density').innerHTML = `${(sum.density_per_mm2 || 0).toLocaleString()} <span class="metric-unit">/ mm²</span>`;
+        document.getElementById('val-density-px').textContent = `${(sum.density || 0).toExponential(3)} / px²`;
+        document.getElementById('val-area').innerHTML = `${(sum.mean_area || 0).toFixed(1)} <span class="metric-unit">µm²</span>`;
+        document.getElementById('val-area-std').textContent = `± ${(sum.std_area || 0).toFixed(1)} µm²`;
+        document.getElementById('val-circ').textContent = (sum.mean_circularity || 0).toFixed(3);
+        document.getElementById('val-circ-std').textContent = `± ${(sum.std_circularity || 0).toFixed(3)}`;
+        document.getElementById('val-ecc').textContent = (sum.mean_eccentricity || 0).toFixed(3);
+        document.getElementById('val-ecc-std').textContent = `± ${(sum.std_eccentricity || 0).toFixed(3)}`;
+        document.getElementById('val-nnd').innerHTML = `${(sum.mean_nearest_neighbor_distance_um || 0).toFixed(1)} <span class="metric-unit">µm</span>`;
+
+        // Show results section FIRST so DOM calculates correct non-zero dimensions
+        resultsSection.style.display = 'block';
+
+        // Render Table
+        renderTable(data.nuclei);
+
+        // Render Charts after DOM layout reflow
+        setTimeout(() => {
+          renderAreaHistogram(data.nuclei);
+          renderShapeScatter(data.nuclei);
+        }, 80);
+
+        resultsSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+      } catch (err) {
+        showAlert('Result Render Error: ' + err.message);
+      }
+    }
+
+    // -------------------------------------------------------------
+    // View Mode Toggle (Side-by-Side / Overlay / Raw)
+    // -------------------------------------------------------------
+    document.querySelectorAll('.toggle-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.toggle-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        const mode = btn.getAttribute('data-mode');
+
+        if (mode === 'split') {
+          comparisonView.style.gridTemplateColumns = '1fr 1fr';
+          panelRaw.style.display = 'flex';
+          panelOverlay.style.display = 'flex';
+        } else if (mode === 'overlay') {
+          comparisonView.style.gridTemplateColumns = '1fr';
+          panelRaw.style.display = 'none';
+          panelOverlay.style.display = 'flex';
+        } else if (mode === 'raw') {
+          comparisonView.style.gridTemplateColumns = '1fr';
+          panelRaw.style.display = 'flex';
+          panelOverlay.style.display = 'none';
+        }
+      });
+    });
+
+    // -------------------------------------------------------------
+    // Table Rendering & Sorting
+    // -------------------------------------------------------------
+    function renderTable(nuclei) {
+      tableCountBadge.textContent = `${nuclei.length} nuclei`;
+      const query = tableSearch.value.trim().toLowerCase();
+
+      let filtered = nuclei.filter(n => {
+        if (!query) return true;
+        return String(n.id).includes(query);
+      });
+
+      filtered.sort((a, b) => {
+        const valA = a[sortColumn];
+        const valB = b[sortColumn];
+        return sortAsc ? (valA > valB ? 1 : -1) : (valA < valB ? 1 : -1);
+      });
+
+      tableTbody.innerHTML = '';
+      filtered.forEach(n => {
+        const tr = document.createElement('tr');
+        const [cx, cy] = n.centroid || [0, 0];
+        tr.innerHTML = `
+          <td><strong style="color: var(--accent-cyan);">#${n.id}</strong></td>
+          <td>${n.area_um2 ? n.area_um2.toFixed(1) : (n.area * 0.25 * 0.25).toFixed(1)}</td>
+          <td>${n.area.toFixed(0)}</td>
+          <td>${n.perimeter_um ? n.perimeter_um.toFixed(1) : (n.perimeter * 0.25).toFixed(1)}</td>
+          <td><span style="color: ${n.circularity > 0.8 ? 'var(--accent-emerald)' : 'var(--accent-amber)'}">${n.circularity.toFixed(3)}</span></td>
+          <td>${n.eccentricity.toFixed(3)}</td>
+          <td class="font-mono" style="color: var(--text-dim);">(${cx.toFixed(1)}, ${cy.toFixed(1)})</td>
+        `;
+        tableTbody.appendChild(tr);
+      });
+    }
+
+    tableSearch.addEventListener('input', () => {
+      if (latestResult) renderTable(latestResult.nuclei);
+    });
+
+    document.querySelectorAll('th[data-sort]').forEach(th => {
+      th.addEventListener('click', () => {
+        const col = th.getAttribute('data-sort');
+        if (sortColumn === col) {
+          sortAsc = !sortAsc;
+        } else {
+          sortColumn = col;
+          sortAsc = true;
+        }
+        if (latestResult) renderTable(latestResult.nuclei);
+      });
+    });
+
+    // Export CSV
+    btnExportCsv.addEventListener('click', () => {
+      if (!latestResult || !latestResult.nuclei) return;
+      const headers = ['id', 'area_px', 'area_um2', 'perimeter_px', 'perimeter_um', 'circularity', 'eccentricity', 'centroid_x', 'centroid_y'];
+      const rows = latestResult.nuclei.map(n => [
+        n.id,
+        n.area,
+        n.area_um2 || (n.area * 0.0625),
+        n.perimeter,
+        n.perimeter_um || (n.perimeter * 0.25),
+        n.circularity,
+        n.eccentricity,
+        n.centroid[0],
+        n.centroid[1]
+      ]);
+
+      const csvContent = [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `cellscope_nuclei_${latestResult.job_id.slice(0, 8)}.csv`;
+      a.click();
+      URL.revokeObjectURL(url);
+    });
+
+    // -------------------------------------------------------------
+    // Pure Canvas Interactive Charts (Zero External Dependencies)
+    // -------------------------------------------------------------
+    const tooltip = document.getElementById('canvas-tooltip');
+
+    function renderAreaHistogram(nuclei) {
+      const canvas = document.getElementById('chart-area-hist');
+      if (!canvas) return;
+      const ctx = canvas.getContext('2d');
+      const dpr = window.devicePixelRatio || 1;
+
+      const rect = canvas.getBoundingClientRect();
+      const W = Math.max(300, rect.width || canvas.parentElement.clientWidth || 450);
+      const H = Math.max(180, rect.height || canvas.parentElement.clientHeight || 220);
+
+      canvas.width = Math.floor(W * dpr);
+      canvas.height = Math.floor(H * dpr);
+      if (ctx.resetTransform) ctx.resetTransform();
+      else ctx.setTransform(1, 0, 0, 1, 0, 0);
+      ctx.scale(dpr, dpr);
+
+      ctx.clearRect(0, 0, W, H);
+
+      if (!nuclei || nuclei.length === 0) {
+        ctx.fillStyle = '#6b7280';
+        ctx.font = '12px Inter, sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText('No nuclear area data to display', W / 2, H / 2);
+        return;
+      }
+
+      const areas = nuclei
+        .map(n => typeof n.area_um2 === 'number' && n.area_um2 > 0 ? n.area_um2 : (n.area * 0.0625))
+        .filter(a => typeof a === 'number' && !isNaN(a) && a > 0);
+
+      if (areas.length === 0) return;
+
+      const minA = Math.min(...areas);
+      const maxA = Math.max(...areas);
+      const span = maxA - minA > 0 ? maxA - minA : 10;
+      const numBins = Math.min(14, Math.max(6, Math.floor(Math.sqrt(areas.length))));
+      const binWidth = span / numBins;
+      const bins = new Array(numBins).fill(0);
+
+      areas.forEach(a => {
+        const binIdx = Math.min(numBins - 1, Math.floor((a - minA) / binWidth));
+        bins[binIdx]++;
+      });
+
+      const maxCount = Math.max(...bins, 1);
+      const padL = 45, padR = 25, padT = 28, padB = 36;
+      const chartW = Math.max(10, W - padL - padR);
+      const chartH = Math.max(10, H - padT - padB);
+
+      // Grid lines & Y-ticks
+      ctx.strokeStyle = '#243046';
+      ctx.lineWidth = 1;
+      for (let i = 0; i <= 4; i++) {
+        const y = padT + (chartH / 4) * i;
+        ctx.beginPath();
+        ctx.moveTo(padL, y);
+        ctx.lineTo(W - padR, y);
+        ctx.stroke();
+
+        const countVal = Math.round(maxCount - (maxCount / 4) * i);
+        ctx.fillStyle = '#6b7280';
+        ctx.font = '10px Inter, sans-serif';
+        ctx.textAlign = 'right';
+        ctx.fillText(countVal, padL - 8, y + 3);
+      }
+
+      // Draw Bars & Cache coordinates for hover
+      const barSlots = [];
+      const slotW = chartW / numBins;
+      const barW = Math.max(2, slotW - 4);
+
+      bins.forEach((cnt, idx) => {
+        const barH = (cnt / maxCount) * chartH;
+        const x = padL + idx * slotW + 2;
+        const y = padT + (chartH - barH);
+
+        const grad = ctx.createLinearGradient(0, y, 0, y + Math.max(1, barH));
+        grad.addColorStop(0, '#06b6d4');
+        grad.addColorStop(1, '#2563eb');
+        ctx.fillStyle = grad;
+        ctx.fillRect(x, y, barW, barH);
+
+        barSlots.push({
+          x, y, w: barW, h: barH,
+          binMin: minA + idx * binWidth,
+          binMax: minA + (idx + 1) * binWidth,
+          cnt
+        });
+      });
+
+      // Mean line
+      const meanA = areas.reduce((a, b) => a + b, 0) / areas.length;
+      const meanX = padL + ((meanA - minA) / span) * chartW;
+      ctx.save();
+      ctx.setLineDash([4, 4]);
+      ctx.strokeStyle = '#f59e0b';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(meanX, padT);
+      ctx.lineTo(meanX, padT + chartH);
+      ctx.stroke();
+      ctx.restore();
+
+      ctx.fillStyle = '#f59e0b';
+      ctx.font = '600 10px Inter, sans-serif';
+      ctx.textAlign = 'center';
+      const labelX = Math.max(padL + 40, Math.min(W - padR - 40, meanX));
+      ctx.fillText(`Mean: ${meanA.toFixed(1)} µm²`, labelX, padT - 8);
+
+      // X-axis ticks & labels
+      ctx.fillStyle = '#6b7280';
+      ctx.font = '10px Inter, sans-serif';
+      ctx.textAlign = 'left';
+      ctx.fillText(`${minA.toFixed(0)} µm²`, padL, H - 12);
+      ctx.textAlign = 'center';
+      ctx.fillText(`${((minA + maxA) / 2).toFixed(0)} µm²`, padL + chartW / 2, H - 12);
+      ctx.textAlign = 'right';
+      ctx.fillText(`${maxA.toFixed(0)} µm²`, W - padR, H - 12);
+
+      // Canvas Mousemove Hover Tooltip
+      canvas.onmousemove = (e) => {
+        const cRect = canvas.getBoundingClientRect();
+        const mx = e.clientX - cRect.left;
+        const my = e.clientY - cRect.top;
+
+        const hit = barSlots.find(b => mx >= b.x && mx <= b.x + b.w && my >= b.y && my <= padT + chartH);
+        if (hit) {
+          tooltip.innerHTML = `<strong>${hit.binMin.toFixed(1)} - ${hit.binMax.toFixed(1)} µm²</strong><br>${hit.cnt} nuclei (${((hit.cnt / areas.length) * 100).toFixed(1)}%)`;
+          tooltip.style.left = `${e.pageX + 12}px`;
+          tooltip.style.top = `${e.pageY - 28}px`;
+          tooltip.style.display = 'block';
+        } else {
+          tooltip.style.display = 'none';
+        }
+      };
+
+      canvas.onmouseleave = () => {
+        tooltip.style.display = 'none';
+      };
+    }
+
+    function renderShapeScatter(nuclei) {
+      const canvas = document.getElementById('chart-shape-scatter');
+      if (!canvas) return;
+      const ctx = canvas.getContext('2d');
+      const dpr = window.devicePixelRatio || 1;
+
+      const rect = canvas.getBoundingClientRect();
+      const W = Math.max(300, rect.width || canvas.parentElement.clientWidth || 450);
+      const H = Math.max(180, rect.height || canvas.parentElement.clientHeight || 220);
+
+      canvas.width = Math.floor(W * dpr);
+      canvas.height = Math.floor(H * dpr);
+      if (ctx.resetTransform) ctx.resetTransform();
+      else ctx.setTransform(1, 0, 0, 1, 0, 0);
+      ctx.scale(dpr, dpr);
+
+      ctx.clearRect(0, 0, W, H);
+
+      if (!nuclei || nuclei.length === 0) {
+        ctx.fillStyle = '#6b7280';
+        ctx.font = '12px Inter, sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText('No nuclei detected to plot', W / 2, H / 2);
+        return;
+      }
+
+      const padL = 45, padR = 25, padT = 25, padB = 38;
+      const chartW = Math.max(10, W - padL - padR);
+      const chartH = Math.max(10, H - padT - padB);
+
+      // Grid Lines & Ticks
+      ctx.strokeStyle = '#243046';
+      ctx.lineWidth = 1;
+      for (let i = 0; i <= 4; i++) {
+        // Horizontal grid
+        const y = padT + (chartH / 4) * i;
+        ctx.beginPath();
+        ctx.moveTo(padL, y);
+        ctx.lineTo(W - padR, y);
+        ctx.stroke();
+
+        // Y tick (Eccentricity 1.0 down to 0.0)
+        const eccVal = (1.0 - i * 0.25).toFixed(2);
+        ctx.fillStyle = '#6b7280';
+        ctx.font = '10px Inter, sans-serif';
+        ctx.textAlign = 'right';
+        ctx.fillText(eccVal, padL - 8, y + 3);
+
+        // Vertical grid
+        const x = padL + (chartW / 4) * i;
+        ctx.beginPath();
+        ctx.moveTo(x, padT);
+        ctx.lineTo(x, padT + chartH);
+        ctx.stroke();
+
+        // X tick (Circularity 0.0 to 1.0)
+        const circVal = (i * 0.25).toFixed(2);
+        ctx.textAlign = 'center';
+        ctx.fillText(circVal, x, padT + chartH + 14);
+      }
+
+      // Chart Border Box
+      ctx.strokeRect(padL, padT, chartW, chartH);
+
+      // Axis Titles
+      ctx.fillStyle = '#9ca3af';
+      ctx.font = '500 11px Inter, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText('Circularity (0.0 = irregular → 1.0 = round)', padL + chartW / 2, H - 6);
+
+      ctx.save();
+      ctx.translate(12, padT + chartH / 2);
+      ctx.rotate(-Math.PI / 2);
+      ctx.textAlign = 'center';
+      ctx.fillText('Eccentricity (0.0 = circle → 1.0 = elongated)', 0, 0);
+      ctx.restore();
+
+      // Plot Scatter Points & Cache coordinates for hover
+      const points = [];
+      nuclei.forEach(n => {
+        const circ = Math.max(0, Math.min(1, typeof n.circularity === 'number' ? n.circularity : 0.5));
+        const ecc = Math.max(0, Math.min(1, typeof n.eccentricity === 'number' ? n.eccentricity : 0.5));
+
+        const x = padL + circ * chartW;
+        const y = padT + (1.0 - ecc) * chartH;
+
+        ctx.beginPath();
+        ctx.arc(x, y, 4, 0, Math.PI * 2);
+        ctx.fillStyle = 'rgba(6, 182, 212, 0.75)';
+        ctx.fill();
+        ctx.strokeStyle = '#38bdf8';
+        ctx.lineWidth = 1;
+        ctx.stroke();
+
+        points.push({ x, y, n });
+      });
+
+      // Canvas Mousemove Hover Tooltip
+      canvas.onmousemove = (e) => {
+        const cRect = canvas.getBoundingClientRect();
+        const mx = e.clientX - cRect.left;
+        const my = e.clientY - cRect.top;
+
+        // Find nearest point within 10px
+        let nearest = null;
+        let minDist = 14;
+
+        for (const p of points) {
+          const dist = Math.hypot(p.x - mx, p.y - my);
+          if (dist < minDist) {
+            minDist = dist;
+            nearest = p.n;
+          }
+        }
+
+        if (nearest) {
+          tooltip.innerHTML = `<strong>Cell #${nearest.id}</strong><br>Circularity: ${nearest.circularity.toFixed(3)}<br>Eccentricity: ${nearest.eccentricity.toFixed(3)}<br>Area: ${nearest.area_um2 ? nearest.area_um2.toFixed(1) : (nearest.area * 0.0625).toFixed(1)} µm²`;
+          tooltip.style.left = `${e.pageX + 12}px`;
+          tooltip.style.top = `${e.pageY - 28}px`;
+          tooltip.style.display = 'block';
+        } else {
+          tooltip.style.display = 'none';
+        }
+      };
+
+      canvas.onmouseleave = () => {
+        tooltip.style.display = 'none';
+      };
+    }
+
+    // Debounced Resize Observer / Event
+    let resizeTimeout = null;
+    window.addEventListener('resize', () => {
+      clearTimeout(resizeTimeout);
+      resizeTimeout = setTimeout(() => {
+        if (latestResult && latestResult.nuclei) {
+          renderAreaHistogram(latestResult.nuclei);
+          renderShapeScatter(latestResult.nuclei);
+        }
+      }, 100);
+    });
+
+  </script>
+</body>
+</html>
+
