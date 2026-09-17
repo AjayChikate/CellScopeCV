@@ -1,0 +1,6 @@
+{
+  "test_samples": 102,
+  "mean_pixel_dice": 0.8686461223136718,
+  "mean_pixel_iou": 0.7843159755112308,
+  "mean_instance_f1": 0.6819596476324354
+}
